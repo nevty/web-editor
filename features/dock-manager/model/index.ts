@@ -3,16 +3,15 @@ import {
   DockviewApi,
   IDockviewPanelProps,
   IDockviewPanel,
-  PanelCollection,
 } from 'dockview';
 import { createEffect, createEvent, restore, sample } from 'effector';
 
 export const createDockManagerModel = <
-  PC extends PanelCollection<IDockviewPanelProps>,
+  Components extends Record<string, React.FunctionComponent<IDockviewPanelProps>>,
 >() => {
-  type Parameters = React.ComponentProps<PC[keyof PC]>['params'];
+  type Parameters = React.ComponentProps<Components[keyof Components]>['params'];
   type AddPanelFromCollectionOptions = AddPanelOptions<Parameters> & {
-    component: keyof PC;
+    component: keyof Components;
   };
 
   const addPanelFx = createEffect<
