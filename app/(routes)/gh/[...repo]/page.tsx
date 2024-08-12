@@ -4,6 +4,11 @@ import dynamic from 'next/dynamic';
 
 const WebEditor = dynamic(() => import('./components'), { ssr: false });
 
-export default ({ params }: { params: { repo: string[] } }) => (
-  <WebEditor repoPath={params.repo} />
-);
+export default function WebEditorPage({
+  params,
+}: {
+  params: { repo: string[] };
+}) {
+  return <WebEditor repoPath={params.repo} />;
+}
+WebEditorPage.displayName = 'WebEditorPage';
