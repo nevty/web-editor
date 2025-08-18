@@ -1,4 +1,4 @@
-import { useGate } from 'effector-react';
+import { useGate, useUnit } from 'effector-react';
 
 import { ExplorerPanel, EditorPanel } from '@widgets/workspace';
 import {
@@ -10,17 +10,77 @@ import {
 
 import {
   repoGate,
-  workspaceModel,
-  terminalModel,
-  webContainerModel,
+  $filesModel,
+  $shellModel,
+  $workspaceModel,
+  $terminalModel,
+  $webContainerModel,
 } from '../_model';
 
 import PreviewPanel from './preview';
+import { useEffect } from 'react';
+import { sample } from 'effector';
+import { combineEvents } from 'patronum';
 
 const WebEditor = ({ repoPath }: { repoPath: string[] }) => {
+  const webContainerModel = useUnit($webContainerModel);
+  const terminalModel = useUnit($terminalModel);
+  const workspaceModel = useUnit($workspaceModel);
+  const filesModel = useUnit($filesModel);
+  const shellModel = useUnit($shellModel);
+
   useGate(repoGate, {
     githubRepo: repoPath.join('/'),
   });
+
+  useEffect(() => {
+    if (!webContainerModel) return;
+    if (!terminalModel) return;
+    if (!workspaceModel) return;
+    if (!filesModel) return;
+    if (!shellModel) return;
+
+    sample({
+      clock: combineEvents([
+        filesModel.mountFilesFx.done,
+        terminalModel.TerminalGate.open,
+      ]),
+      target: [
+        terminalModel.initTerminal,
+        workspaceModel.editorModel.initMonacoFx,
+      ],
+    });
+
+    sample({
+      clock: workspaceModel.editorModel.initMonacoFx.done,
+      source: {
+        terminal: terminalModel.$terminal,
+        webContainer: webContainerModel.$webContainer,
+      },
+      target: shellModel.installDependenciesFx,
+    });
+
+    sample({
+      clock: shellModel.installDependenciesFx.done,
+      source: {
+        terminal: terminalModel.$terminal,
+        webContainer: webContainerModel.$webContainer,
+      },
+      target: shellModel.startServerFx,
+    });
+  }, [
+    webContainerModel,
+    terminalModel,
+    workspaceModel,
+    filesModel,
+    shellModel,
+  ]);
+
+  if (!webContainerModel) return;
+  if (!terminalModel) return;
+  if (!workspaceModel) return;
+  if (!filesModel) return;
+  if (!shellModel) return;
 
   return (
     <div className="flex w-screen h-screen overflow-hidden">
