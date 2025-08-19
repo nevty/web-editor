@@ -5,8 +5,8 @@ export async function startServer(
   terminal: Terminal,
   webContainer: WebContainer,
 ) {
-  terminal.write('npm run dev \r');
-  const process = await webContainer.spawn('npm', ['run', 'dev']);
+  terminal.write('pnpm run dev \r');
+  const process = await webContainer.spawn('pnpm', ['run', 'dev']);
   const input = process.input.getWriter();
 
   process.output.pipeTo(

@@ -6,8 +6,8 @@ export async function installDependencies(
   webContainer: WebContainer,
 ) {
   // TODO: terminal should be in connected state to webcontainer fs
-  terminal.write('npm i \r');
-  const process = await webContainer.spawn('npm', ['i']);
+  terminal.write('pnpm i \r');
+  const process = await webContainer.spawn('pnpm', ['i']);
   const input = process.input.getWriter();
 
   process.output.pipeTo(
