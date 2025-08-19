@@ -33,6 +33,7 @@ const createWorkspaceModelFx = createEffect<
   WorkspaceModel
 >(createWorkspaceModel);
 
+//TODO: find better way, possibly make WebcontainerModel singleton
 export const $webContainerModel = createStore<WebcontainerModel | null>(
   null,
 ).on(createWebcontainerModelFx.doneData, (_, data) => data);
@@ -191,5 +192,98 @@ sample({
       fn: () => 'server-start' as const,
       target: progressModel.completeStep,
     });
+  },
+});
+
+// Initialize terminal and editor after all models are created
+sample({
+  clock: combineEvents([
+    createFilesModelFx.done,
+    createTerminalModelFx.done,
+    createWorkspaceModelFx.done,
+  ]),
+  source: {
+    filesModel: $filesModel,
+    terminalModel: $terminalModel,
+    workspaceModel: $workspaceModel,
+  },
+  filter: (source: {
+    filesModel: FilesModel | null;
+    terminalModel: TerminalModel | null;
+    workspaceModel: WorkspaceModel | null;
+  }): source is {
+    filesModel: FilesModel;
+    terminalModel: TerminalModel;
+    workspaceModel: WorkspaceModel;
+  } =>
+    source.filesModel !== null &&
+    source.terminalModel !== null &&
+    source.workspaceModel !== null,
+  fn: ({ filesModel, terminalModel, workspaceModel }) => {
+    // Initialize terminal and monaco after files are mounted and terminal gate is open
+    sample({
+      clock: combineEvents([
+        filesModel.mountFilesFx.done,
+        terminalModel.TerminalGate.open,
+      ]),
+      target: [
+        terminalModel.initTerminal,
+        workspaceModel.editorModel.initMonacoFx,
+      ],
+    });
+
+    return null;
+  },
+});
+
+// Initialize shell commands after monaco and terminal are ready
+sample({
+  clock: combineEvents([
+    createTerminalModelFx.done,
+    createWorkspaceModelFx.done,
+    createShellModelFx.done,
+    createWebcontainerModelFx.done,
+  ]),
+  source: {
+    terminalModel: $terminalModel,
+    workspaceModel: $workspaceModel,
+    shellModel: $shellModel,
+    webContainerModel: $webContainerModel,
+  },
+  filter: (source: {
+    terminalModel: TerminalModel | null;
+    workspaceModel: WorkspaceModel | null;
+    shellModel: ShellModel | null;
+    webContainerModel: WebcontainerModel | null;
+  }): source is {
+    terminalModel: TerminalModel;
+    workspaceModel: WorkspaceModel;
+    shellModel: ShellModel;
+    webContainerModel: WebcontainerModel;
+  } =>
+    source.terminalModel !== null &&
+    source.workspaceModel !== null &&
+    source.shellModel !== null &&
+    source.webContainerModel !== null,
+  fn: ({ terminalModel, workspaceModel, shellModel, webContainerModel }) => {
+    sample({
+      clock: workspaceModel.editorModel.initMonacoFx.done,
+      source: {
+        terminal: terminalModel.$terminal,
+        webContainer: webContainerModel.$webContainer,
+      },
+      target: shellModel.installDependenciesFx,
+    });
+
+    sample({
+      clock: shellModel.installDependenciesFx.done,
+      source: {
+        terminal: terminalModel.$terminal,
+        webContainer: webContainerModel.$webContainer,
+      },
+      target: shellModel.startServerFx,
+    });
+
+    return null;
   },
 });

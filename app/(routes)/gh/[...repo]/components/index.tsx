@@ -1,7 +1,4 @@
-import { sample } from 'effector';
 import { useGate, useUnit } from 'effector-react';
-import { combineEvents } from 'patronum';
-import { useEffect } from 'react';
 
 import { ExplorerPanel, EditorPanel } from '@widgets/workspace';
 import {
@@ -33,49 +30,6 @@ const WebEditor = ({ repoPath }: { repoPath: string[] }) => {
   useGate(repoGate, {
     githubRepo: repoPath.join('/'),
   });
-
-  useEffect(() => {
-    if (!webContainerModel) return;
-    if (!terminalModel) return;
-    if (!workspaceModel) return;
-    if (!filesModel) return;
-    if (!shellModel) return;
-
-    sample({
-      clock: combineEvents([
-        filesModel.mountFilesFx.done,
-        terminalModel.TerminalGate.open,
-      ]),
-      target: [
-        terminalModel.initTerminal,
-        workspaceModel.editorModel.initMonacoFx,
-      ],
-    });
-
-    sample({
-      clock: workspaceModel.editorModel.initMonacoFx.done,
-      source: {
-        terminal: terminalModel.$terminal,
-        webContainer: webContainerModel.$webContainer,
-      },
-      target: shellModel.installDependenciesFx,
-    });
-
-    sample({
-      clock: shellModel.installDependenciesFx.done,
-      source: {
-        terminal: terminalModel.$terminal,
-        webContainer: webContainerModel.$webContainer,
-      },
-      target: shellModel.startServerFx,
-    });
-  }, [
-    webContainerModel,
-    terminalModel,
-    workspaceModel,
-    filesModel,
-    shellModel,
-  ]);
 
   if (!webContainerModel) return;
   if (!terminalModel) return;
