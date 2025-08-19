@@ -85,8 +85,7 @@ sample({
 });
 
 sample({
-  clock: createWebcontainerModelFx.done,
-  source: $webContainerModel,
+  clock: createWebcontainerModelFx.doneData,
   filter: (webContainerModel: WebcontainerModel | null) =>
     webContainerModel !== null,
   fn: (webContainerModel) => ({ webContainerModel: webContainerModel }),
