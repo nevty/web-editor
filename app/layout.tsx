@@ -3,8 +3,8 @@ import 'dockview/dist/styles/dockview.css';
 import './global.css';
 
 export const metadata: Metadata = {
-  title: 'React Project Tutorial',
-  description: 'React Project Tutorial',
+  title: 'Web Editor',
+  description: 'Web Editor',
 };
 
 export default function RootLayout({
