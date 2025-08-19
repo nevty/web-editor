@@ -1,10 +1,9 @@
 import { attach, createEffect, createStore, sample } from 'effector';
 import { createGate } from 'effector-react';
-import { combineEvents } from 'patronum';
-import { WebContainer } from '@webcontainer/api';
-import { Terminal } from 'xterm';
+import { combineEvents, once } from 'patronum';
 
 import { createWorkspaceModel, WorkspaceModel } from '@widgets/workspace';
+import { createProgressModel } from '@features/webcontainer-progress';
 import { createTerminalModel, TerminalModel } from '@shared/ui';
 import {
   createFilesModel,
@@ -81,7 +80,7 @@ export const repoGate = createGate<{ githubRepo: string; apiKey?: string }>(
 
 // models creation
 sample({
-  clock: repoGate.open,
+  clock: once(repoGate.open),
   target: [createWebcontainerModelFx, createShellModelFx],
 });
 
@@ -138,4 +137,60 @@ sample({
   clock: combineEvents([repoGate.open, createFilesModelFx.done]),
   fn: ([params]) => params,
   target: getFileSystemTreeFx,
+});
+
+// Progress tracking
+export const progressModel = createProgressModel();
+sample({
+  clock: repoGate.open,
+  target: progressModel.reset,
+});
+
+// Track main effects
+progressModel.trackProgress(getFileSystemTreeFx, 'files-load');
+progressModel.trackProgress(createWebcontainerModelFx, 'webcontainer-boot');
+
+// Track shell model effects after creation
+sample({
+  clock: createShellModelFx.done,
+  fn: ({ result: shellModel }) => {
+    progressModel.trackProgress(
+      shellModel.installDependenciesFx,
+      'dependencies-install',
+    );
+
+    sample({
+      clock: shellModel.startServerFx,
+      fn: () => 'server-start' as const,
+      target: progressModel.startStep,
+    });
+
+    sample({
+      clock: shellModel.startServerFx.fail,
+      fn: ({ error }) => ({
+        step: 'server-start' as const,
+        error: error.message,
+      }),
+      target: progressModel.failStep,
+    });
+  },
+});
+
+// complete server-start step
+sample({
+  clock: createWebcontainerModelFx.done,
+  source: { webContainerModel: $webContainerModel },
+  filter: (source: {
+    webContainerModel: WebcontainerModel | null;
+  }): source is { webContainerModel: WebcontainerModel } =>
+    source.webContainerModel !== null,
+  fn: ({ webContainerModel }) => {
+    sample({
+      // complete step when server changes only once
+      clock: once(webContainerModel.$server),
+      filter: (server) => server !== null,
+      fn: () => 'server-start' as const,
+      target: progressModel.completeStep,
+    });
+  },
 });

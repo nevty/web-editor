@@ -16,7 +16,7 @@ export const ScreenNoServerRunning = () => (
   </ScreenWrapper>
 );
 
-const ScreenWrapper = ({
+export const ScreenWrapper = ({
   children,
   className,
 }: {

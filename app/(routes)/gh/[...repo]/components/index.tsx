@@ -1,4 +1,7 @@
+import { sample } from 'effector';
 import { useGate, useUnit } from 'effector-react';
+import { combineEvents } from 'patronum';
+import { useEffect } from 'react';
 
 import { ExplorerPanel, EditorPanel } from '@widgets/workspace';
 import {
@@ -15,12 +18,10 @@ import {
   $workspaceModel,
   $terminalModel,
   $webContainerModel,
+  progressModel,
 } from '../_model';
 
 import PreviewPanel from './preview';
-import { useEffect } from 'react';
-import { sample } from 'effector';
-import { combineEvents } from 'patronum';
 
 const WebEditor = ({ repoPath }: { repoPath: string[] }) => {
   const webContainerModel = useUnit($webContainerModel);
@@ -105,7 +106,10 @@ const WebEditor = ({ repoPath }: { repoPath: string[] }) => {
         </ResizablePanel>
         <ResizableHandle />
         <ResizablePanel defaultSize={34}>
-          <PreviewPanel webContainerModel={webContainerModel} />
+          <PreviewPanel
+            webContainerModel={webContainerModel}
+            $progress={progressModel.$progress}
+          />
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
