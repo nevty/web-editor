@@ -5,22 +5,39 @@ export async function installDependencies(
   terminal: Terminal,
   webContainer: WebContainer,
 ) {
+  const runCommand = async (command: string, args: string[] = []) => {
+    const process = await webContainer.spawn(command, args);
+    process.output.pipeTo(
+      new WritableStream({
+        write(data) {
+          terminal.write(data);
+        },
+      }),
+    );
+    return process.exit;
+  };
+  
   // TODO: terminal should be in connected state to webcontainer fs
-  terminal.write('pnpm i \r');
-  const process = await webContainer.spawn('pnpm', ['i']);
-  const input = process.input.getWriter();
+  //fetching dependencies
+  terminal.write('\r\n\x1b[1;33mFetching dependencies...\x1b[0m\r\n');
+  const fetchExitCode = await runCommand('pnpm', ['fetch']);
+  if (fetchExitCode !== 0) {
+    terminal.write(
+      `\r\n\x1b[1;31mFailed to fetch dependencies. Exit code: ${fetchExitCode}\x1b[0m\r\n`,
+    );
+    return fetchExitCode;
+  }
 
-  process.output.pipeTo(
-    new WritableStream({
-      write(data) {
-        terminal.write(data);
-      },
-    }),
-  );
-  const terminalStream = terminal.onData((data) => {
-    input.write(data);
-  });
-  const processCode = await process.exit;
-  terminalStream.dispose();
-  return processCode;
+  // install
+  terminal.write('\r\n\x1b[1;33mInstalling dependencies...\x1b[0m\r\n');
+  const installExitCode = await runCommand('pnpm', [
+    'install',
+    '--prefer-offline',
+  ]);
+  if (installExitCode !== 0) {
+    terminal.write(
+      `\r\n\x1b[1;31mFailed to install dependencies. Exit code: ${installExitCode}\x1b[0m\r\n`,
+    );
+  }
+  return installExitCode;
 }
